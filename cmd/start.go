@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	resty "gopkg.in/resty.v0"
@@ -43,20 +44,75 @@ var (
 	//LONGITUDE = float64(104.8673)
 )
 
+//Place to hold known connections so we're not running multiple getters
+type Cameras struct {
+	mutex sync.Mutex
+	Hosts []string
+}
+
+var cameras Cameras
+
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Start looking for cameras and saving images",
+	Long: `Continue to check for new cameras starting
+and image processor for each new one found.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
-		startCapture()
+		ticker := time.NewTicker(time.Millisecond * 500)
+		quit := make(chan struct{})
+		go func() {
+			// Make a channel for results and start listening
+			entriesCh := make(chan *mdns.ServiceEntry, 4)
+			for {
+				select {
+				case <-ticker.C:
+					mdns.Lookup("_goshot._tcp", entriesCh)
+					for entry := range entriesCh {
+						if !findCamera(entry.AddrV4.String()) {
+							log.Println("No camera found at that address: ", entry.AddrV4.String())
+							startCapture(entry)
+						}
+					}
+				case <-quit:
+					ticker.Stop()
+					return
+				}
+			}
+
+		}()
+
 	},
+}
+
+func findCamera(host string) bool {
+	cameras.mutex.Lock()
+	defer cameras.mutex.Unlock()
+	found := false
+	for i := range cameras.Hosts {
+		if cameras.Hosts[i] == host {
+			found = true
+		}
+	}
+	return found
+}
+
+func addCamera(host string) {
+	cameras.mutex.Lock()
+	defer cameras.mutex.Unlock()
+	cameras.Hosts = append(cameras.Hosts, host)
+}
+
+func removeCamera(host string) {
+	cameras.mutex.Lock()
+	defer cameras.mutex.Unlock()
+	for key, value := range cameras.Hosts {
+		if value == host {
+			cameras.Hosts = append(cameras.Hosts[:key], cameras.Hosts[key+1:]...)
+		}
+	}
+
 }
 
 func init() {
@@ -78,54 +134,53 @@ func init() {
 	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func startCapture() {
-	// Make a channel for results and start listening
-	entriesCh := make(chan *mdns.ServiceEntry, 4)
-	mdns.Lookup("_goshot._tcp", entriesCh)
-	//go queryServer(&entriesCh)
-	for entry := range entriesCh {
-		fmt.Printf("Got new entry: %v\n", entry)
+func startCapture(entry *mdns.ServiceEntry) {
 
-		ticker := time.NewTicker(time.Duration(interval*60) * time.Second)
-		quit := make(chan struct{})
-		addr := entry.AddrV4.String()
-		port := strconv.Itoa(entry.Port)
-		message, err := callCamera(addr, port)
-		if err != nil {
-			log.Println(err)
-			//ticker.Stop()
-		}
-		//log.Println(message)
-		var image Image
-		err = json.Unmarshal([]byte(message), &image)
-		saveImage(image.Image)
-		go func(addr string, port string) {
-			for {
-				select {
-				case <-ticker.C:
-					if isDaylight() {
-						message, err := callCamera(addr, port)
-						if err != nil {
-							log.Println(err)
-							return
-							//ticker.Stop()
-						}
-						//log.Println(message)
-						var image Image
-						err = json.Unmarshal([]byte(message), &image)
-						if image.Error != "" {
-							log.Println(image.Error)
-							return
-						}
-						saveImage(image.Image)
-					}
-				case <-quit:
-					ticker.Stop()
-					return
-				}
-			}
-		}(addr, port)
+	//go queryServer(&entriesCh)
+
+	fmt.Printf("Got new entry: %v\n", entry)
+
+	ticker := time.NewTicker(time.Duration(interval*60) * time.Second)
+	quit := make(chan struct{})
+	addr := entry.AddrV4.String()
+	addCamera(addr)
+	defer removeCamera(addr)
+	port := strconv.Itoa(entry.Port)
+	message, err := callCamera(addr, port)
+	if err != nil {
+		log.Println(err)
+		//ticker.Stop()
 	}
+	//log.Println(message)
+	var image Image
+	err = json.Unmarshal([]byte(message), &image)
+	saveImage(image.Image)
+	go func(addr string, port string) {
+		for {
+			select {
+			case <-ticker.C:
+				if isDaylight() {
+					message, err := callCamera(addr, port)
+					if err != nil {
+						log.Println(err)
+						return
+						//ticker.Stop()
+					}
+					//log.Println(message)
+					var image Image
+					err = json.Unmarshal([]byte(message), &image)
+					if image.Error != "" {
+						log.Println(image.Error)
+						return
+					}
+					saveImage(image.Image)
+				}
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}(addr, port)
 }
 
 func callCamera(server, port string) (string, error) {
