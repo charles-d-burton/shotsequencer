@@ -86,7 +86,7 @@ func startCapture() {
 	for entry := range entriesCh {
 		fmt.Printf("Got new entry: %v\n", entry)
 
-		ticker := time.NewTicker(time.Duration(interval) * time.Second)
+		ticker := time.NewTicker(time.Duration(interval*60) * time.Second)
 		quit := make(chan struct{})
 		addr := entry.AddrV4.String()
 		port := strconv.Itoa(entry.Port)
