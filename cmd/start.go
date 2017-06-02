@@ -152,6 +152,7 @@ func saveImage(imageString string) {
 	image, _, err := image.Decode(reader)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 
 	err = os.MkdirAll(directory, 0777)
@@ -159,6 +160,7 @@ func saveImage(imageString string) {
 
 	if err != nil {
 		log.Println(err)
+		return
 	}
 
 	var opt jpeg.Options
