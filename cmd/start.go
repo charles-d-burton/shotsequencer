@@ -155,7 +155,7 @@ func saveImage(imageString string) {
 	}
 
 	err = os.MkdirAll(directory, 0777)
-	out, err := os.Create(directory + strconv.FormatInt(makeTimestamp(), 10) + ".jpg")
+	out, err := os.Create(directory + "/" + strconv.FormatInt(makeTimestamp(), 10) + ".jpg")
 
 	if err != nil {
 		log.Println(err)
