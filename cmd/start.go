@@ -60,59 +60,8 @@ var startCmd = &cobra.Command{
 and image processor for each new one found.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
-		ticker := time.NewTicker(time.Millisecond * 500)
-		quit := make(chan struct{})
-		go func() {
-			// Make a channel for results and start listening
-			entriesCh := make(chan *mdns.ServiceEntry, 4)
-			for {
-				select {
-				case <-ticker.C:
-					mdns.Lookup("_goshot._tcp", entriesCh)
-					for entry := range entriesCh {
-						if !findCamera(entry.AddrV4.String()) {
-							log.Println("No camera found at that address: ", entry.AddrV4.String())
-							startCapture(entry)
-						}
-					}
-				case <-quit:
-					ticker.Stop()
-					return
-				}
-			}
-
-		}()
-
+		startQueries()
 	},
-}
-
-func findCamera(host string) bool {
-	cameras.mutex.Lock()
-	defer cameras.mutex.Unlock()
-	found := false
-	for i := range cameras.Hosts {
-		if cameras.Hosts[i] == host {
-			found = true
-		}
-	}
-	return found
-}
-
-func addCamera(host string) {
-	cameras.mutex.Lock()
-	defer cameras.mutex.Unlock()
-	cameras.Hosts = append(cameras.Hosts, host)
-}
-
-func removeCamera(host string) {
-	cameras.mutex.Lock()
-	defer cameras.mutex.Unlock()
-	for key, value := range cameras.Hosts {
-		if value == host {
-			cameras.Hosts = append(cameras.Hosts[:key], cameras.Hosts[key+1:]...)
-		}
-	}
-
 }
 
 func init() {
@@ -132,6 +81,31 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func startQueries() {
+	ticker := time.NewTicker(time.Millisecond * 500)
+	quit := make(chan struct{})
+	go func() {
+		// Make a channel for results and start listening
+		entriesCh := make(chan *mdns.ServiceEntry, 4)
+		for {
+			select {
+			case <-ticker.C:
+				mdns.Lookup("_goshot._tcp", entriesCh)
+				for entry := range entriesCh {
+					if !findCamera(entry.AddrV4.String()) {
+						log.Println("No camera found at that address: ", entry.AddrV4.String())
+						startCapture(entry)
+					}
+				}
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+
+	}()
 }
 
 func startCapture(entry *mdns.ServiceEntry) {
@@ -244,4 +218,33 @@ func isDaylight() bool {
 	}
 	log.Println("It's dark y'all!")
 	return false
+}
+
+func findCamera(host string) bool {
+	cameras.mutex.Lock()
+	defer cameras.mutex.Unlock()
+	found := false
+	for i := range cameras.Hosts {
+		if cameras.Hosts[i] == host {
+			found = true
+		}
+	}
+	return found
+}
+
+func addCamera(host string) {
+	cameras.mutex.Lock()
+	defer cameras.mutex.Unlock()
+	cameras.Hosts = append(cameras.Hosts, host)
+}
+
+func removeCamera(host string) {
+	cameras.mutex.Lock()
+	defer cameras.mutex.Unlock()
+	for key, value := range cameras.Hosts {
+		if value == host {
+			cameras.Hosts = append(cameras.Hosts[:key], cameras.Hosts[key+1:]...)
+		}
+	}
+
 }
