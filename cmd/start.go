@@ -86,9 +86,10 @@ func init() {
 func startQueries() {
 	ticker := time.NewTicker(time.Millisecond * 500)
 	quit := make(chan struct{})
+	entriesCh := make(chan *mdns.ServiceEntry, 4)
 	go func() {
 		// Make a channel for results and start listening
-		entriesCh := make(chan *mdns.ServiceEntry, 4)
+
 		for {
 			select {
 			case <-ticker.C:
