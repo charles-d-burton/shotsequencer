@@ -84,30 +84,16 @@ func init() {
 }
 
 func startQueries() {
-	ticker := time.NewTicker(time.Millisecond * 500)
-	quit := make(chan struct{})
 	entriesCh := make(chan *mdns.ServiceEntry, 4)
 	mdns.Lookup("_goshot._tcp", entriesCh)
 	for entry := range entriesCh {
 		if !findCamera(entry.AddrV4.String()) {
 			log.Println("No camera found at that address: ", entry.AddrV4.String())
 			startCapture(entry)
+		} else {
+			log.Println("Already processing camera from: ", entry.AddrV4.String())
 		}
 	}
-	go func() {
-		// Make a channel for results and start listening
-
-		for {
-			select {
-			case <-ticker.C:
-
-			case <-quit:
-				ticker.Stop()
-				return
-			}
-		}
-
-	}()
 }
 
 func startCapture(entry *mdns.ServiceEntry) {
