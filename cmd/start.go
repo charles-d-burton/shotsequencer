@@ -37,6 +37,7 @@ var (
 	longitude string
 	followSun bool
 	cycle     string
+	directory string
 	//LATITUDE = float64(39.7293)
 	//LONGITUDE = float64(104.8673)
 )
@@ -53,7 +54,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
-
+		startCapture()
 	},
 }
 
@@ -63,6 +64,7 @@ func init() {
 	startCmd.Flags().StringVarP(&longitude, "long", "", "104.8673", "Your Longitude")
 	startCmd.Flags().BoolVarP(&followSun, "follow-sun", "", false, "Use to follow diurnal cycle")
 	startCmd.Flags().StringVarP(&cycle, "cycle", "", "day", "Set to either day/night")
+	startCmd.Flags().StringVarP(&directory, "directory", "", "shots/", "Set the directory to save pictures")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
@@ -150,8 +152,8 @@ func saveImage(imageString string) {
 		log.Println(err)
 	}
 
-	err = os.MkdirAll("pics/", 0777)
-	out, err := os.Create("pics/" + strconv.FormatInt(makeTimestamp(), 10) + ".jpg")
+	err = os.MkdirAll(directory, 0777)
+	out, err := os.Create(directory + strconv.FormatInt(makeTimestamp(), 10) + ".jpg")
 
 	if err != nil {
 		log.Println(err)
