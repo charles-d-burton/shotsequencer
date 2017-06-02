@@ -69,7 +69,7 @@ func init() {
 	startCmd.Flags().StringVarP(&latitude, "lat", "", "39.7293", "Your Latitude")
 	startCmd.Flags().StringVarP(&longitude, "long", "", "104.8673", "Your Longitude")
 	startCmd.Flags().BoolVarP(&followSun, "follow-sun", "", false, "Use to follow diurnal cycle")
-	startCmd.Flags().StringVarP(&cycle, "cycle", "", "day", "Set to either day/night")
+	startCmd.Flags().StringVarP(&cycle, "cycle", "", "day", "Set to either day/night, defaults to day")
 	startCmd.Flags().StringVarP(&directory, "directory", "", "shots/", "Set the directory to save pictures")
 	startCmd.Flags().IntVarP(&interval, "interval", "", 2, "Set the interval to capture in minutes")
 	// Here you will define your flags and configuration settings.
@@ -121,7 +121,7 @@ func startCapture(entry *mdns.ServiceEntry) {
 		for {
 			select {
 			case <-ticker.C:
-				if isDaylight() {
+				if validDiurnal() {
 					message, err := callCamera(addr, port)
 					if err != nil {
 						log.Println(err)
@@ -192,20 +192,30 @@ func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
 
-func isDaylight() bool {
-	now := time.Now()
-	lat, _ := strconv.ParseFloat(latitude, 64)
-	long, _ := strconv.ParseFloat(longitude, 64)
-	sunup := astrotime.CalcSunrise(now, lat, long)
-	log.Println("Sunup: " + sunup.Format("2006-01-02 15:04:05"))
-	sundown := astrotime.CalcSunset(now, lat, long)
-	log.Println("Sundown: " + sundown.Format("2006-01-02 15:04:05"))
-	if now.Unix() > (sunup.Unix()+1800) && now.Unix() < (sundown.Unix()-1800) {
-		log.Println("It's daylight y'all!")
-		return true
+func validDiurnal() bool {
+	if followSun {
+		now := time.Now()
+		lat, _ := strconv.ParseFloat(latitude, 64)
+		long, _ := strconv.ParseFloat(longitude, 64)
+		sunup := astrotime.CalcSunrise(now, lat, long)
+		log.Println("Sunup: " + sunup.Format("2006-01-02 15:04:05"))
+		sundown := astrotime.CalcSunset(now, lat, long)
+		nextsun := astrotime.NextSunrise(now, lat, long)
+		log.Println("Sundown: " + sundown.Format("2006-01-02 15:04:05"))
+		if cycle == "day" {
+			if now.Unix() > (sunup.Unix()+1800) && now.Unix() < (sundown.Unix()-1800) {
+				log.Println("It's daylight y'all!")
+				return true
+			}
+		} else if cycle == "night" {
+			if now.Unix() > (sundown.Unix()+3600) && now.Unix() < (nextsun.Unix()-3600) {
+				log.Println("It's nighttime y'all!")
+				return true
+			}
+		}
 	}
-	log.Println("It's dark y'all!")
-	return false
+	log.Println("Don't care about the sun")
+	return true
 }
 
 func findCamera(host string) bool {
