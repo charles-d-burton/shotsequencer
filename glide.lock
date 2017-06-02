@@ -1,0 +1,22 @@
+hash: 37ad72eab83a235bac93572500142c44f151d0a866c4602570915095cbf6a914
+updated: 2017-06-02T09:26:05.251527125-06:00
+imports:
+- name: github.com/cpucycle/astrotime
+  version: 9c7d514efdb561775030eaf8f1a9ae6bddb3a2ca
+- name: github.com/hashicorp/go.net
+  version: 104dcad90073cd8d1e6828b2af19185b60cf3e29
+  subpackages:
+  - internal/iana
+  - ipv4
+  - ipv6
+- name: github.com/hashicorp/mdns
+  version: 4e527d9d808175f132f949523e640c699e4253bb
+- name: github.com/miekg/dns
+  version: fb6fbed0f5ec4e418de4f156c18d2e4f9bc854e7
+- name: golang.org/x/net
+  version: f315505cf3349909cdf013ea56690da34e96a451
+  subpackages:
+  - publicsuffix
+- name: gopkg.in/resty.v0
+  version: 7a8134d8718193eb857994adee49d73a302e7718
+testImports: []

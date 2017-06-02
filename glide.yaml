@@ -1,0 +1,6 @@
+package: shotsequencer
+import:
+- package: github.com/cpucycle/astrotime
+- package: github.com/hashicorp/mdns
+- package: gopkg.in/resty.v0
+  version: ^0.12.0
