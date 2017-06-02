@@ -38,6 +38,7 @@ var (
 	followSun bool
 	cycle     string
 	directory string
+	interval  int
 	//LATITUDE = float64(39.7293)
 	//LONGITUDE = float64(104.8673)
 )
@@ -65,6 +66,7 @@ func init() {
 	startCmd.Flags().BoolVarP(&followSun, "follow-sun", "", false, "Use to follow diurnal cycle")
 	startCmd.Flags().StringVarP(&cycle, "cycle", "", "day", "Set to either day/night")
 	startCmd.Flags().StringVarP(&directory, "directory", "", "shots/", "Set the directory to save pictures")
+	startCmd.Flags().IntVarP(&interval, "intervarl", "", 1, "Set the interval to capture in minutes")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
@@ -145,7 +147,7 @@ type Image struct {
 }
 
 func saveImage(imageString string) {
-
+	log.Println(imageString)
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(imageString))
 	image, _, err := image.Decode(reader)
 	if err != nil {
