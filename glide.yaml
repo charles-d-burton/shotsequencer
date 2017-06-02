@@ -2,5 +2,8 @@ package: shotsequencer
 import:
 - package: github.com/cpucycle/astrotime
 - package: github.com/hashicorp/mdns
+- package: github.com/mitchellh/go-homedir
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
 - package: gopkg.in/resty.v0
   version: ^0.12.0
