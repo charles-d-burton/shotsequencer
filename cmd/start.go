@@ -173,7 +173,7 @@ func saveImage(imageString string) {
 	}
 	t := time.Now()
 	date := t.Format("2006-01-02")
-	err = os.MkdirAll(directory+date, 0777)
+	err = os.MkdirAll(directory+"/"+date, 0777)
 	out, err := os.Create(directory + "/" + date + "/" + strconv.FormatInt(makeTimestamp(), 10) + ".jpg")
 
 	if err != nil {
