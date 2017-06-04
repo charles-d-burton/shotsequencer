@@ -83,6 +83,7 @@ func init() {
 	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
+//Search for cameras broadcasting on the network
 func startQueries() {
 	entriesCh := make(chan *mdns.ServiceEntry, 4)
 	mdns.Lookup("_goshot._tcp", entriesCh)
@@ -96,6 +97,7 @@ func startQueries() {
 	}
 }
 
+//Start capturing photos from a camera
 func startCapture(entry *mdns.ServiceEntry) {
 
 	//go queryServer(&entriesCh)
@@ -145,6 +147,7 @@ func startCapture(entry *mdns.ServiceEntry) {
 	}(addr, port)
 }
 
+//Connect to the remote camera and download the image
 func callCamera(server, port string) (string, error) {
 
 	resp, err := resty.R().Get("http://" + server + ":" + port + "/shot")
@@ -163,6 +166,7 @@ type Image struct {
 	Image string `json:"image"`
 }
 
+//Write the image to the filesystem
 func saveImage(imageString string) {
 	//log.Println(imageString)
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(imageString))
@@ -189,10 +193,15 @@ func saveImage(imageString string) {
 	}
 }
 
+//Create a long of the current date/time
 func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
 
+/*
+ * Check if system has been configured to follow the sun.  If so, then check
+ * if it's been configured for night capture or day capture.
+ */
 func validDiurnal() bool {
 	if followSun {
 		now := time.Now()
@@ -214,11 +223,13 @@ func validDiurnal() bool {
 				return true
 			}
 		}
+		return false
 	}
 	log.Println("Don't care about the sun")
 	return true
 }
 
+//Verify that discovered camera has not been started capturing already
 func findCamera(host string) bool {
 	cameras.mutex.Lock()
 	defer cameras.mutex.Unlock()
